@@ -1,8 +1,27 @@
 from typing import Any, Tuple
 
 import numpy as np
+import cv2
+from modules.FaceAlignment import FaceAlignment
+from modules.FaceDetection import FaceDetection
 
 from triton_service import run_inference, run_inference_retinaface
+
+
+def open_image(image_bytes: Any) -> Any:
+    try:
+        return cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
+    except Exception as e:
+        raise Exception("Failed to open image: " + str(e))
+    
+def to_bytes(img: np.ndarray, fmt: str = ".jpg") -> bytes:
+    """
+    Convert a numpy OpenCV image to bytes in the given format (default JPEG).
+    """
+    success, encoded = cv2.imencode(fmt, img)
+    if not success:
+        raise ValueError("Failed to encode image")
+    return encoded.tobytes()
 
 
 def _cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
@@ -42,13 +61,16 @@ def calculate_face_similarity(client: Any, image_a: bytes, image_b: bytes) -> fl
     """
     face_a, face_b = get_faces(client, image_a, image_b)
 
-    print(face_a)
+    decoded_image_a = open_image(image_a)
+    decoded_image_b = open_image(image_b) 
 
+    landmarks_a = face_a['landmarks']
+    kps_a = FaceDetection.get_kps(landmarks_a)
+    aligned_image_a = FaceAlignment.crop_and_align(face_a, kps_a, decoded_image_a)
 
-    #todo
-    #get kps
-    #align_face
-    #then call get_embeddings with face
+    landmarks_b = face_b['landmarks']
+    kps_b = FaceDetection.get_kps(landmarks_b)
+    aligned_image_b = FaceAlignment.crop_and_align(face_b, kps_b, decoded_image_b)
     
-    emb_a, emb_b = get_embeddings(client, image_a, image_b)
+    emb_a, emb_b = get_embeddings(client, to_bytes(aligned_image_a), to_bytes(aligned_image_b))
     return _cosine_similarity(emb_a, emb_b)

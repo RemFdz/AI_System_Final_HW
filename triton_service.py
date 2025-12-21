@@ -210,9 +210,9 @@ def run_inference_retinaface(client: Any, image_bytes: bytes) -> dict:
     idx = np.argmax(areas)
 
     result = {
-        "boxes": boxes[idx:idx+1],
-        "landmarks": landmarks[idx:idx+1],
-        "scores": scores[idx:idx+1],
+        "bbox": boxes[idx],
+        "landmarks": landmarks[idx],
+        "scores": scores[idx],
     }
 
     return result
