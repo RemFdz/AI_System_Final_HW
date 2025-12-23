@@ -86,9 +86,8 @@ def get_align_face(client: Any, image: bytes):
 
     landmarks = face['landmarks']
     landmarks = np.asarray(landmarks).reshape(5, 2)
-    #kps = FaceDetection.get_kps(landmarks)
     aligned_image = FaceAlignment.crop_and_align(face, landmarks, face['image'])
-    #return face_debug_bbox_landmarks_to_png_response(face['image'], face['bbox'], landmarks)
+    
     return face_to_png_response(aligned_image)
 
 def calculate_face_similarity(client: Any, image_a: bytes, image_b: bytes) -> float:

@@ -132,16 +132,13 @@ def run_inference(client: Any, image_bytes: bytes) -> Any:
     import numpy as np
     from tritonclient import http as httpclient
 
-    # 1. Load image
     with Image.open(BytesIO(image_bytes)) as img:
         img = img.convert("RGB").resize(MODEL_IMAGE_SIZE)
         np_img = np.asarray(img, dtype=np.float32)
 
     np_img = (np_img - 127.5) / 128.0
-    #np_img = np.transpose(np_img, (2, 0, 1))
     batch = np.expand_dims(np_img, axis=0)
 
-    # 4. Triton inference
     infer_input = httpclient.InferInput(
         MODEL_INPUT_NAME,
         batch.shape,
