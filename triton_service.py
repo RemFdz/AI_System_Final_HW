@@ -126,6 +126,11 @@ def create_triton_client(url: str) -> Any:
     return client
 
 
+#TODO: add both processing modules for retina and arcface
+# run inference should take a which module to use, client, image_bytes, preprocess the good way and infer the good model 
+# (to clean code and reduce code duplication)
+
+
 def run_inference(client: Any, image_bytes: bytes) -> Any:
     from io import BytesIO
     from PIL import Image
