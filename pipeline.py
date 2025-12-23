@@ -47,9 +47,6 @@ def open_image(image_bytes: Any) -> Any:
         raise Exception("Failed to open image: " + str(e))
     
 def to_bytes(img: np.ndarray, fmt: str = ".jpg") -> bytes:
-    """
-    Convert a numpy OpenCV image to bytes in the given format (default JPEG).
-    """
     success, encoded = cv2.imencode(fmt, img)
     if not success:
         raise ValueError("Failed to encode image")
@@ -63,12 +60,6 @@ def _cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
 
 
 def get_embeddings(client: Any, image_a: bytes, image_b: bytes) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Call Triton twice to obtain embeddings for two images.
-
-    Extend this by adding detection/alignment/antispoof when those Triton models
-    are available in the repository. For now we assume inputs are already aligned.
-    """
     emb_a = run_inference(client, image_a)
     emb_b = run_inference(client, image_b)
     return emb_a.squeeze(0), emb_b.squeeze(0)
@@ -87,16 +78,10 @@ def get_align_face(client: Any, image: bytes):
     landmarks = face['landmarks']
     landmarks = np.asarray(landmarks).reshape(5, 2)
     aligned_image = FaceAlignment.crop_and_align(face, landmarks, face['image'])
-    
+
     return face_to_png_response(aligned_image)
 
 def calculate_face_similarity(client: Any, image_a: bytes, image_b: bytes) -> float:
-    """
-    Minimal end-to-end similarity using Triton-managed FR model.
-
-    Students should swap in detection, alignment, and spoofing once those models
-    are added to the Triton repository. This keeps all model execution on Triton.
-    """
     face_a, face_b = get_faces(client, image_a, image_b)
 
     landmarks_a = face_a['landmarks']
