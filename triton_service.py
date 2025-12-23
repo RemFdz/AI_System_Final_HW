@@ -139,8 +139,9 @@ def run_inference(client: Any, image_bytes: bytes) -> Any:
 
     with Image.open(BytesIO(image_bytes)) as img:
         img = img.convert("RGB").resize(MODEL_IMAGE_SIZE)
-        np_img = np.asarray(img, dtype=np.float32) / 255.0
+        np_img = np.asarray(img, dtype=np.float32)
 
+    np_img = (np_img - 127.5) / 128.0  # [-1, 1]
     np_img = np.transpose(np_img, (2, 0, 1))  # HWC -> CHW
     batch = np.expand_dims(np_img, axis=0)
 

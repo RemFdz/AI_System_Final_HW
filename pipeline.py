@@ -57,12 +57,18 @@ def to_bytes(img: np.ndarray, fmt: str = ".jpg") -> bytes:
 
 
 def _cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
-    """Compute cosine similarity between two 1D vectors."""
-    a_norm = np.linalg.norm(vec_a)
-    b_norm = np.linalg.norm(vec_b)
-    if a_norm == 0.0 or b_norm == 0.0:
-        return 0.0
-    return float(np.dot(vec_a, vec_b) / (a_norm * b_norm))
+    # Flatten au cas où il y a des dimensions batch
+    vec_a = vec_a.flatten()
+    vec_b = vec_b.flatten()
+    
+    # L2-normaliser (si pas déjà fait dans run_inference)
+    vec_a = vec_a / np.linalg.norm(vec_a)
+    vec_b = vec_b / np.linalg.norm(vec_b)
+    
+    # Cosine similarity = dot product pour vecteurs normalisés
+    similarity = float(np.dot(vec_a, vec_b))
+    
+    return similarity
 
 
 def get_embeddings(client: Any, image_a: bytes, image_b: bytes) -> Tuple[np.ndarray, np.ndarray]:
@@ -104,9 +110,11 @@ def calculate_face_similarity(client: Any, image_a: bytes, image_b: bytes) -> fl
     face_a, face_b = get_faces(client, image_a, image_b)
 
     landmarks_a = face_a['landmarks']
+    landmarks_a = np.asarray(landmarks_a).reshape(5, 2)
     aligned_image_a = FaceAlignment.crop_and_align(face_a, landmarks_a, face_a['image'])
 
     landmarks_b = face_b['landmarks']
+    landmarks_b = np.asarray(landmarks_b).reshape(5, 2)
     aligned_image_b = FaceAlignment.crop_and_align(face_b, landmarks_b, face_b['image'])
     
     emb_a, emb_b = get_embeddings(client, to_bytes(aligned_image_a), to_bytes(aligned_image_b))
