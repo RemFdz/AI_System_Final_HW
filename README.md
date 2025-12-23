@@ -6,6 +6,7 @@
 python convert_to_onnx.py \
   --weights-path weights/your_fr_model.pth \
   --onnx-path model_repository/fr_model/1/model.onnx
+```
 
 ## Run with Docker + FastAPI (all-in-one container)
 - Build image (uses `model_repository/*`):
