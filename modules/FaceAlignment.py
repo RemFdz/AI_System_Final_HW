@@ -86,5 +86,6 @@ class FaceAlignment:
             flags=cv2.INTER_LINEAR,
             borderValue=(128, 128, 128)
         )
+        aligned_image = cv2.cvtColor(aligned, cv2.COLOR_BGR2RGB)
 
-        return aligned
+        return aligned_image

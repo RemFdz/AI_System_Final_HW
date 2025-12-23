@@ -1,0 +1,29 @@
+{
+  "name": "fr_model",
+  "versions": [
+    "1"
+  ],
+  "platform": "onnxruntime_onnx",
+  "inputs": [
+    {
+      "name": "input_1",
+      "datatype": "FP32",
+      "shape": [
+        -1,
+        112,
+        112,
+        3
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "name": "embedding",
+      "datatype": "FP32",
+      "shape": [
+        -1,
+        512
+      ]
+    }
+  ]
+}

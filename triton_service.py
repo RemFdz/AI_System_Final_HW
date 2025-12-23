@@ -14,7 +14,7 @@ TRITON_METRICS_PORT = 8002
 #embeddings
 MODEL_NAME = "fr_model"
 MODEL_VERSION = "1"
-MODEL_INPUT_NAME = "input"
+MODEL_INPUT_NAME = "input_1"
 MODEL_OUTPUT_NAME = "embedding"
 MODEL_IMAGE_SIZE = (112, 112)
 
@@ -127,30 +127,42 @@ def create_triton_client(url: str) -> Any:
 
 
 def run_inference(client: Any, image_bytes: bytes) -> Any:
-    """
-    Preprocess an input image, call Triton, and decode embeddings or scores.
-    """
-    try:
-        from io import BytesIO
-        from PIL import Image
-        from tritonclient import http as httpclient
-    except ImportError as exc:  # pragma: no cover - defensive
-        raise RuntimeError("Pillow, numpy, and tritonclient[http] are required to run inference.") from exc
+    from io import BytesIO
+    from PIL import Image
+    import numpy as np
+    from tritonclient import http as httpclient
 
+    # 1. Load image
     with Image.open(BytesIO(image_bytes)) as img:
         img = img.convert("RGB").resize(MODEL_IMAGE_SIZE)
         np_img = np.asarray(img, dtype=np.float32)
 
-    np_img = (np_img - 127.5) / 128.0  # [-1, 1]
-    np_img = np.transpose(np_img, (2, 0, 1))  # HWC -> CHW
+    np_img = (np_img - 127.5) / 128.0
+    #np_img = np.transpose(np_img, (2, 0, 1))
     batch = np.expand_dims(np_img, axis=0)
 
-    infer_input = httpclient.InferInput(MODEL_INPUT_NAME, batch.shape, "FP32")
+    # 4. Triton inference
+    infer_input = httpclient.InferInput(
+        MODEL_INPUT_NAME,
+        batch.shape,
+        "FP32"
+    )
     infer_input.set_data_from_numpy(batch)
 
     infer_output = httpclient.InferRequestedOutput(MODEL_OUTPUT_NAME)
-    response = client.infer(model_name=MODEL_NAME, inputs=[infer_input], outputs=[infer_output])
-    return response.as_numpy(MODEL_OUTPUT_NAME)
+    response = client.infer(
+        model_name=MODEL_NAME,
+        inputs=[infer_input],
+        outputs=[infer_output]
+    )
+
+    embedding = response.as_numpy(MODEL_OUTPUT_NAME)
+
+    embedding = embedding / np.linalg.norm(
+        embedding, axis=1, keepdims=True
+    )
+
+    return embedding
 
 
 def decode_boxes(boxes, priors):

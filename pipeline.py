@@ -57,15 +57,6 @@ def to_bytes(img: np.ndarray, fmt: str = ".jpg") -> bytes:
 
 
 def _cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
-    # Flatten au cas où il y a des dimensions batch
-    vec_a = vec_a.flatten()
-    vec_b = vec_b.flatten()
-    
-    # L2-normaliser (si pas déjà fait dans run_inference)
-    vec_a = vec_a / np.linalg.norm(vec_a)
-    vec_b = vec_b / np.linalg.norm(vec_b)
-    
-    # Cosine similarity = dot product pour vecteurs normalisés
     similarity = float(np.dot(vec_a, vec_b))
     
     return similarity
