@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
-from pipeline import calculate_face_similarity
+from pipeline import calculate_face_similarity, get_align_face
 from triton_service import (
     TRITON_HTTP_PORT,
     create_triton_client,
@@ -75,6 +75,21 @@ async def embedding(image: UploadFile = File(..., description="Face image to emb
 
     embedding_list = embedding_arr.reshape(embedding_arr.shape[0], -1).tolist()
     return {"embedding": embedding_list}
+
+@app.post("/align_face", tags=["Utils"])
+async def face_similarity(
+    image: UploadFile = File(..., description="First face image (aligned to model input size)"),
+) -> dict[str, Any]:
+    if _triton_client is None:
+        raise HTTPException(status_code=503, detail="Triton client is not initialized.")
+
+    content_a = await image.read()
+    try:
+        aligned_image = get_align_face(_triton_client, content_a)
+    except Exception as exc:  # pragma: no cover - defensive
+        raise HTTPException(status_code=500, detail=f"Similarity failed: {exc}") from exc
+
+    return aligned_image
 
 
 @app.post("/face-similarity", tags=["Face Recognition"])

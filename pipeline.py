@@ -1,11 +1,43 @@
 from typing import Any, Tuple
 
+import io
 import numpy as np
 import cv2
 from modules.FaceAlignment import FaceAlignment
 from modules.FaceDetection import FaceDetection
+from starlette.responses import StreamingResponse
 
 from triton_service import run_inference, run_inference_retinaface
+
+def face_debug_bbox_landmarks_to_png_response(
+    image: np.ndarray,
+    bbox: Any,
+    landmarks: np.ndarray
+) -> StreamingResponse:
+    debug_img = image.copy()
+
+    x1, y1, x2, y2 = map(int, bbox)
+    cv2.rectangle(debug_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+    for (x, y) in landmarks.astype(int):
+        cv2.circle(debug_img, (x, y), 3, (0, 0, 255), -1)
+
+    success, buffer = cv2.imencode(".png", debug_img)
+    if not success:
+        raise RuntimeError("Failed to encode PNG")
+
+    return StreamingResponse(
+        io.BytesIO(buffer.tobytes()),
+        media_type="image/png"
+    )
+
+
+def face_to_png_response(aligned_face: np.ndarray) -> StreamingResponse:
+    success, buffer = cv2.imencode(".png", aligned_face)
+    if not success:
+        raise Exception("Failed to encode image as PNG")
+
+    return StreamingResponse(io.BytesIO(buffer.tobytes()), media_type="image/png")
 
 
 def open_image(image_bytes: Any) -> Any:
@@ -52,6 +84,16 @@ def get_faces(client: Any, image_a: bytes, image_b: bytes):
     return faces_a, faces_b
 
 
+def get_align_face(client: Any, image: bytes):
+    face = run_inference_retinaface(client, image)
+
+    landmarks = face['landmarks']
+    landmarks = np.asarray(landmarks).reshape(5, 2)
+    #kps = FaceDetection.get_kps(landmarks)
+    aligned_image = FaceAlignment.crop_and_align(face, landmarks, face['image'])
+    #return face_debug_bbox_landmarks_to_png_response(face['image'], face['bbox'], landmarks)
+    return face_to_png_response(aligned_image)
+
 def calculate_face_similarity(client: Any, image_a: bytes, image_b: bytes) -> float:
     """
     Minimal end-to-end similarity using Triton-managed FR model.
@@ -61,16 +103,11 @@ def calculate_face_similarity(client: Any, image_a: bytes, image_b: bytes) -> fl
     """
     face_a, face_b = get_faces(client, image_a, image_b)
 
-    decoded_image_a = open_image(image_a)
-    decoded_image_b = open_image(image_b) 
-
     landmarks_a = face_a['landmarks']
-    kps_a = FaceDetection.get_kps(landmarks_a)
-    aligned_image_a = FaceAlignment.crop_and_align(face_a, kps_a, decoded_image_a)
+    aligned_image_a = FaceAlignment.crop_and_align(face_a, landmarks_a, face_a['image'])
 
     landmarks_b = face_b['landmarks']
-    kps_b = FaceDetection.get_kps(landmarks_b)
-    aligned_image_b = FaceAlignment.crop_and_align(face_b, kps_b, decoded_image_b)
+    aligned_image_b = FaceAlignment.crop_and_align(face_b, landmarks_b, face_b['image'])
     
     emb_a, emb_b = get_embeddings(client, to_bytes(aligned_image_a), to_bytes(aligned_image_b))
     return _cosine_similarity(emb_a, emb_b)
